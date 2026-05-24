@@ -1,0 +1,109 @@
+﻿@page "/"
+@using BlazorDragonBallApi.Models
+@inject HttpClient Http
+
+<PageTitle>Busca de Personagens - DBZ</PageTitle>
+
+<div class="container mt-4">
+    <h2>Consultar Personagem Dragon Ball</h2>
+    
+    <div class="row g-3 align-items-center my-3">
+        <div class="col-auto">
+            <label for="characterId" class="col-form-label">Digite o ID do Personagem:</label>
+        </div>
+        <div class="col-auto">
+            <input type="number" id="characterId" class="form-control" @bind="characterId" min="1" />
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="BuscarPersonagem" disabled="@isSearching">
+                @if (isSearching)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span> Buscando...</span>
+                }
+                else
+                {
+                    <span>Buscar</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    <hr />
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMessage
+        </div>
+    }
+
+    @if (character != null)
+    {
+        <div class="card col-md-6 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-success">@character.Name</h3>
+                <p class="card-text">
+                    <strong>Planeta de Origem:</strong> @(character.OriginPlanet?.Name ?? "Desconhecido")
+                </p>
+                
+                <h5>Transformações:</h5>
+                @if (character.Transformations != null && character.Transformations.Any())
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var trans in character.Transformations)
+                        {
+                            <li class="list-group-item">🔹 @trans.Name</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted">Este personagem não possui transformações registradas.</p>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int characterId = 1;
+    private Character? character;
+    private string? errorMessage;
+    private bool isSearching = false;
+
+    private async Task BuscarPersonagem()
+    {
+        isSearching = true;
+        errorMessage = null;
+        character = null;
+
+        try
+        {
+            var url = $"https://dragonball-api.com/api/characters/{characterId}";
+            
+            var response = await Http.GetFromJsonAsync<Character>(url);
+
+            if (response != null && !string.IsNullOrEmpty(response.Name))
+            {
+                character = response;
+            }
+            else
+            {
+                errorMessage = "Personagem não encontrado.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Erro ao conectar com a API. Verifique o ID ou tente novamente mais tarde.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ocorreu um erro inesperado: {ex.Message}";
+        }
+        finally
+        {
+            isSearching = false;
+        }
+    }
+}
